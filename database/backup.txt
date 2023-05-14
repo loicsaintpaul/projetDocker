@@ -1,0 +1,1 @@
+"C:\Program Files\PostgreSQL\14\bin\pg_dump" -U postgres -p 5432 -W -F p -h localhost -f C:\Postgres_DB_Backups\TEST_DB.sql TEST_DB

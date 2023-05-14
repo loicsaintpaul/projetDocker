@@ -1,0 +1,62 @@
+version: "3"
+services:
+  quizgame-database:
+    build: ./database
+    environment:
+      - POSTGRES_DB=db
+      - POSTGRES_USERNAME=postgres
+      - POSTGRES_PASSWORD=321password
+    ports:
+      - 5432:5432
+    networks:
+      - backend-network
+    user: postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready
+      start_period: 5s
+      interval: 2s
+      retries: 15
+  quizgame-backend:
+    build: ./back
+    environment:
+      - DB_SERVICE=quizgame-database
+    ports:
+      - 8080:8080
+    networks:
+      - backend-network
+      - frontend-network
+    depends_on:
+      quizgame-database:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail --request GET http://localhost:8080/actuator/health
+      start_period: 10s
+      interval: 2s
+      retries: 15
+  quizgame-initialization:
+    build: ./initialization
+    networks:
+      - frontend-network
+    command: run /usr/app/initialization.json --env-var
+      "URL=http://quizgame-backend:8080" -r cli,json
+      --reporter-json-export="reports/initialization-report.json"
+    depends_on:
+      quizgame-backend:
+        condition: service_healthy
+    healthcheck:
+      test: bash -c "[ -f /reports/initialization-report.json ]"
+      start_period: 5s
+      interval: 2s
+      retries: 15
+  quizgame-frontend:
+    build: ./front
+    ports:
+      - 4200:4200
+    networks:
+      - frontend-network
+    command: bash -c "cd /usr/app && npm install && npm start"
+networks:
+  frontend-network: null
+  backend-network: null
